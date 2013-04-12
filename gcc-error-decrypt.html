@@ -1,0 +1,134 @@
+<html>
+<head>
+<script type="text/javascript" src="http://ajax.googleapis.com/ajax/libs/jquery/1.8.0/jquery.min.js"></script>
+</head>
+
+<body>
+<div class="help">
+Paste in your "no matching function for call... candidates are..." or "error: prototype for... candidates are..." g++ error message, 
+and this page will help you find the mis-matched parameter.<br/>
+<a href="#" id="exampleLink1">Example1</a>
+<a href="#" id="exampleLink2">Example2</a>
+<a href="#" id="exampleLink3">Example3</a>
+</div>
+<textarea id="sample" cols="200" rows="20">
+</textarea>
+<br/>
+<br/>
+<br/>
+<table id="output" cellpadding="10px">
+<tbody>
+</tbody>
+</table>
+
+<script type="text/javascript">
+function log(str){
+   setTimeout(function() { throw new Error("DEBUG: " + str); }, 1);
+};
+
+parseFunction = function(errorMsgWithFunctionDecl) {
+	var func = new Object();
+	var leftBracePos = errorMsgWithFunctionDecl.indexOf("(");
+	var rightBracePos = errorMsgWithFunctionDecl.indexOf(")");
+	func.leadup = errorMsgWithFunctionDecl.substring(0, leftBracePos);
+	func.arguments = errorMsgWithFunctionDecl.substring(leftBracePos + 1, rightBracePos);
+	func.followup = errorMsgWithFunctionDecl.substring(rightBracePos + 1);
+	return func;
+};
+
+parseArguments = function(argString) {
+	var result = new Array();
+	var buffer = "";
+	var braceCounter = 0;
+	for (var i = 0; i < argString.length; i++){
+		var c = argString.charAt(i);
+		if (c == ',' && braceCounter == 0) {
+			// emit
+			result[result.length] = buffer;
+			buffer = "";
+		} else {
+			if (c == '<') braceCounter++;
+			else if (c == '>') braceCounter--;
+			// append to current
+			buffer = buffer.concat(c);
+		}
+	}
+	// final emit
+	result[result.length] = buffer;
+	return result;
+};
+
+performAnalysis = function() {
+	$('#output tbody').empty();
+	$('<tr><td>given</td><td>?</td><td>candidate</td>').appendTo($('#output tbody'));
+
+	var sample = $("#sample").val();
+	var arr = sample.split(/[[a-zA-Z0-9\.\/]+:[0-9]+:/gm);
+	log("arr[0]:" + arr[0]);
+	log("arr[1]:" + arr[1]);
+	log("arr[2]:" + arr[2]);
+	var first, second;
+	if (arr[0].trim() != "") {
+		first = arr[0];
+		second = arr[1];
+	} else {
+		first = arr[1];
+		second = arr[2];
+	}
+	
+	var funcWithErr = parseFunction(first);
+	var funcWithErrArgs = parseArguments(funcWithErr.arguments);
+	var candidateFunc = parseFunction(second);
+	var candidateFuncArgs = parseArguments(candidateFunc.arguments);
+
+	for (var i  = 0; i < Math.max(candidateFuncArgs.length, funcWithErrArgs.length); i++){
+		var row = $('<tr></tr>');
+		$('<td></td>').text(funcWithErrArgs[i]).appendTo(row);
+		if (funcWithErrArgs[i] == candidateFuncArgs[i]){		
+			$('<td></td>').html("<div style='color: green'>OK</div>").appendTo(row);
+		} else {
+			$('<td></td>').text("...").appendTo(row);
+		}
+		$('<td></td>').text(candidateFuncArgs[i]).appendTo(row);
+		row.appendTo($('#output tbody'));
+	}
+};
+
+useExampleCode = function(exampleCodeId){
+	$("#sample").val($(exampleCodeId).val());
+	performAnalysis();
+}
+
+$(document).ready(function(){
+
+$('#exampleLink1').click(function() { useExampleCode("#exampleCode1"); });
+$('#exampleLink2').click(function() { useExampleCode("#exampleCode2"); });
+$('#exampleLink3').click(function() { useExampleCode("#exampleCode3"); });
+
+$('#sample').live('input paste', function(e){
+	setTimeout(performAnalysis, 100); // timeout, so that pasting is applied, then we can read it
+});
+
+});
+
+</script>
+
+<textarea id="exampleCode1" style="display: none;">
+ src/utils/sccEditor/backend/sccEditorBackend.cpp:875: error: no matching function for call to 'hydra::sccEditor::backend::SccEditorBackend::createSccMetadataForScc(cool::SharedPtr<hydra::usl::SccIdentifier, CONST>, const hydra::usl::SccState&, cool::TypedInteger<unsigned int, hydra::usl::DeletionStamp::TypedIntegerHelperForEpoch, true>&, hydra::usl::SccCountersEpoch, const hydra::usl::WriteTimestamp&, const hydra::usl::WriteTimestamp&, __gnu_debug_def::list<cool::SharedPtr<hydra::usl::WriteRecordMetadata, CONST>, std::allocator<cool::SharedPtr<hydra::usl::WriteRecordMetadata, CONST> > >&, bool, bool)'
+ 
+ src/utils/sccEditor/backend/sccEditorBackend.cpp:570: note: candidates are: static hydra::usl::SharedSccMetadata hydra::sccEditor::backend::SccEditorBackend::createSccMetadataForScc(cool::SharedPtr<hydra::usl::SccIdentifier, CONST>, hydra::usl::SccState, cool::TypedInteger<unsigned int, hydra::usl::DeletionStamp::TypedIntegerHelperForEpoch, true>, hydra::usl::SccCountersEpoch, hydra::usl::WriteTimestamp, hydra::usl::WriteTimestamp, const __gnu_debug_def::list<cool::SharedPtr<hydra::usl::WriteRecordMetadata, MUTABLE>, std::allocator<cool::SharedPtr<hydra::usl::WriteRecordMetadata, MUTABLE> > >&, bool, bool) 
+</textarea>
+<textarea id="exampleCode2" style="display: none;">
+ 'hydra::sccEditor::backend::SccEditorBackend::createSccMetadataForScc(cool::SharedPtr<hydra::usl::SccIdentifier, CONST>, const hydra::usl::SccState&, cool::Option<cool::TypedInteger<unsigned int, hydra::usl::DeletionStamp::TypedIntegerHelperForEpoch, true> >, hydra::usl::SccCountersEpoch, const hydra::usl::WriteTimestamp&, const hydra::usl::WriteTimestamp&, const __gnu_debug_def::list<cool::SharedPtr<hydra::usl::WriteRecordMetadata, CONST>, std::allocator<cool::SharedPtr<hydra::usl::WriteRecordMetadata, CONST> > >&)'
+ 
+ src/utils/sccEditor/backend/sccEditorBackend.cpp:552: note: candidates are: static hydra::sccEditor::CallResult<hydra::usl::SccMetadata> hydra::sccEditor::backend::SccEditorBackend::createSccMetadataForScc(cool::SharedPtr<hydra::usl::SccIdentifier, CONST>, hydra::usl::SccState, cool::TypedInteger<unsigned int, hydra::usl::DeletionStamp::TypedIntegerHelperForEpoch, true>, hydra::usl::SccCountersEpoch, hydra::usl::WriteTimestamp, hydra::usl::WriteTimestamp, const __gnu_debug_def::list<cool::SharedPtr<hydra::usl::WriteRecordMetadata, CONST>, std::allocator<cool::SharedPtr<hydra::usl::WriteRecordMetadata, CONST> > >&) 
+</textarea>
+<textarea id="exampleCode3" style="display: none;">
+src/kernel/disk/counters.cpp:1390: error: no matching function for call to 'hydra::usl::SccMetadata::SccMetadata(cool::SharedPtr<hydra::usl::SccIdentifier, CONST>, hydra::usl::SccFlags, const hydra::usl::SccSummary&, const hydra::usl::SccDataSummary&, const hydra::usl::_SccDataSizeTemplate_<cool::DiskDataSizeHelper<int, hydra::usl::_SingleSccSize_> >&, const hydra::usl::WriteTimestamp&, hydra::usl::SccMisfeatures&, bool, bool, bool, const hydra::usl::SccPartEnds&)'
+src/include/usl/sccMetadata.h:217: note: candidates are: hydra::usl::SccMetadata::SccMetadata(const hydra::usl::SccMetadata&)
+src/include/usl/sccMetadata.h:108: note:                 hydra::usl::SccMetadata::SccMetadata(const cool::SerializationKludge&)
+src/include/usl/sccMetadata.h:106: note:                 hydra::usl::SccMetadata::SccMetadata(cool::SharedPtr<hydra::usl::SccIdentifier, CONST>, const hydra::usl::SccFlags&, const cool::Option<hydra::usl::SccSummary>&, const cool::Option<hydra::usl::SccDataSummary>&, const hydra::usl::SingleSccDataSize&, hydra::usl::WriteTimestamp, hydra::usl::WriteTimestamp, hydra::usl::SccMisfeatures, bool, bool, bool, const hydra::usl::SccPartEnds&)
+</textarea>
+
+</body>
+</html>
